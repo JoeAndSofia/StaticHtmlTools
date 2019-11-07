@@ -1,0 +1,22 @@
+{
+  "name": "datetime",
+  "version": "1.0.0",
+  "description": "help on datatime aspect",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test",
+    "start": "node index.js"
+  },
+  "keywords": [
+    "date",
+    "time",
+    "tool"
+  ],
+  "author": "Joe.Wang",
+  "license": "ISC",
+  "dependencies": {
+    "date-fns": "^2.5.1",
+    "jquery": "^3.4.1",
+    "jquery-dateformat": "^1.0.4"
+  }
+}

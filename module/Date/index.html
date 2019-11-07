@@ -1,0 +1,56 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>DateTools</title>
+  <!--<script src="node_modules/jquery/dist/jquery.js"></script>-->
+  <script src="../../node_modules/jquery-dateformat/dist/dateFormat.js"></script>
+  <link rel="stylesheet" type="text/css" href="../../css/common.css">
+  <style>
+    html, body, div, span, label {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    .toolOption label, .toolOption input[type="text"] {
+      flex: 0 1 50%;
+      margin: 2px;
+      padding: 1px 4px;
+      box-sizing: border-box;
+      outline: none;
+      line-height: 20px;
+    }
+    .toolOption label {
+      background-color: #7ce3a7;
+    }
+
+    #dateTime {
+      display: flex;
+      flex-flow: row nowrap;
+      justify-content: flex-start;
+      align-items: center;
+      width: 450px;
+    }
+  </style>
+</head>
+<body>
+<div class="toolList">
+  <div id="dateTime" class="toolOption">
+    <label tabindex="0" for="datetime01">DateTime (ClickCopy)</label>
+    <input id="datetime01" type="text"/>
+  </div>
+</div>
+<script>
+  document.getElementById('datetime01').addEventListener(
+    'focus',
+    (e) => {
+      const formattedTime = DateFormat.format.date(new Date(), 'yyyy-MM-dd HH:mm:ss');
+      console.log(formattedTime);
+      e.target.value = formattedTime;
+      e.target.select();
+      document.execCommand("Copy");
+    }
+  );
+</script>
+</body>
+</html>

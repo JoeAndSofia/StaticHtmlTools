@@ -1,0 +1,246 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>StringTools</title>
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  <style>
+	* {
+	    font-size: 16px;
+	}
+	.toolList {
+	    display: flex;
+	    flex-flow: column nowrap;
+	    justify-content: flex-start;
+	    align-items: stretch;
+	}
+	.toolList .toolOption {
+	    flex: 1 0 auto;
+	    border: 1px solid #000;
+	    padding: 5px;
+	}
+	.hide {
+	    display: none !important;
+	}
+  </style>
+  <style>
+    html, body, div, span, label {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    .toolOption .toggleButton {
+      background-color: #0bf9cb;
+    }
+    .toolPanel {
+      display: flex;
+      flex-flow: row nowrap;
+      justify-content: space-between;
+      align-items: stretch;
+      width: 100%;
+    }
+    .toolPanel >.flexElement {
+      flex: 0 0;
+      flex-basis: calc(40% - 20px);
+      display: flex;
+      flex-flow: column nowrap;
+      justify-content: flex-start;
+      align-items: flex-start;
+      margin: 0 10px;
+    }
+    .toolPanel >.flexElement > textarea {
+      height: 400px;
+      width: 100%;
+    }
+    .controlFlexContainer {
+      flex: 0 0;
+      flex-basis: 20%;
+      display: flex;
+      flex-flow: column nowrap;
+      justify-content: space-around;
+      align-items: flex-start;
+      width: 100%;
+      margin: 10px 0;
+      background-color: transparent;
+    }
+    .controlOption {
+      flex: 0 0 auto;
+      display: flex;
+      flex-flow: row nowrap;
+      justify-content: space-around;
+      align-items: center;
+      width: 80%;
+      margin: 0 10%;
+    }
+    .controlFlexContainer > hr {
+      width: 100%;
+    }
+    .controlOption label {
+      width: 60%;
+      flex: 1 1 80%;
+    }
+    .controlOption input[type="checkbox"] {
+      width: 20%;
+      flex: 0 0 auto;
+    }
+  </style>
+</head>
+<body>
+<div class="toolList">
+  <div class="toolOption">
+    <span id="toggleUniquify" class="toggleButton">Uniquify</span>
+    <div class="toolPanel hide">
+      <div class="flexElement">
+        <label for="Unq-uniquifyInput">Input: <span id="inputCount"></span></label>
+        <textarea id="Unq-uniquifyInput" wrap="off" style="overflow:scroll;"></textarea>
+      </div>
+      <div class="controlFlexContainer">
+        <span class="controlOption">
+          <input id="Unq-triggerUniquify" type="button" value="Uniquify ->">
+        </span>
+        <span class="controlOption">
+          <label for="Unq-checkFilterEmpty">FilterEmpty</label>
+          <input id="Unq-checkFilterEmpty" type="checkbox">
+        </span>
+        <span class="controlOption">
+          <label for="Unq-checkOrderInNature">OrderInNature</label>
+          <input id="Unq-checkOrderInNature" type="checkbox">
+        </span>
+        <span class="controlOption">
+          <label for="Unq-checkOrderByLengthFirst">OrderByLengthFirst</label>
+          <input id="Unq-checkOrderByLengthFirst" type="checkbox">
+        </span>
+      </div>
+      <div class="flexElement">
+        <label for="Unq-uniquifyOutput">Output: <span id="outputCount"></span></label>
+        <textarea id="Unq-uniquifyOutput" wrap="off" style="overflow:scroll;"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolOption">
+    <span id="toggleJoinSplit" class="toggleButton">Join & Split</span>
+    <div class="toolPanel hide">
+      <div class="flexElement">
+        <label for="JS-joinSplitJoined">Joined</label>
+        <textarea id="JS-joinSplitJoined" style="overflow:scroll;"></textarea>
+      </div>
+      <div class="controlFlexContainer">
+        <span class="controlOption">
+          <input id="JS-triggerSplitting" type="button" value="Split ->">
+        </span>
+        <hr>
+        <span class="controlOption">
+          <label for="JS-textSplitString">SplitString</label>
+          <input id="JS-textSplitString" style="width: 30px;" type="text" />
+        </span>
+        <span class="controlOption">
+          <label for="JS-Unq-checkFilterEmpty">FilterEmpty</label>
+          <input id="JS-Unq-checkFilterEmpty" type="checkbox">
+        </span>
+        <hr>
+        <span class="controlOption">
+          <input id="JS-triggerJoining" type="button" value="<- Join">
+        </span>
+        <span class="controlOption">
+          <label for="JS-textDelimitString">DelimitString</label>
+          <input id="JS-textDelimitString" style="width: 30px;" type="text" />
+        </span>
+      </div>
+      <div class="flexElement">
+        <label for="JS-joinSplitSplitted">Splitted</label>
+        <textarea id="JS-joinSplitSplitted" style="overflow:scroll;"></textarea>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+  const lineWrapChar = String.fromCharCode(10);
+  
+  $(window).resize(function() {
+    console.log('String-Window-resize');
+    console.log($(window));
+  });
+
+  localStorage.setItem("1-1",1);
+
+  // ******************** section toggle ********************
+
+  const toggleButtons = $(".toggleButton");
+  for(let i=0; i < toggleButtons.length; i++) {
+    const toggleButton = $(toggleButtons[i]);
+    toggleButton.click(e => {
+      toggleButton.siblings(".toolpanel").toggleClass("hide");
+    })
+  }
+
+  // ******************** uniquify panel ********************
+
+  const uniquifyInput = $("#Unq-uniquifyInput");
+  const uniquifyOutput = $("#Unq-uniquifyOutput");
+  $("#Unq-triggerUniquify").click(e => {
+    const inputText = uniquifyInput.val();
+    let entryArr = inputText.split(lineWrapChar);
+    $("#inputCount")[0].innerText = entryArr.length;
+    entryArr = Array.from(new Set(entryArr));
+    if ($("#Unq-checkFilterEmpty")[0].checked) {
+      entryArr = entryArr.filter(item => !!item);
+    }
+    const orderInNature = $("#Unq-checkOrderInNature")[0].checked;
+    const orderByLengthFirst = $("#Unq-checkOrderByLengthFirst")[0].checked;
+    let orderFn = null;
+    if (orderInNature && !orderByLengthFirst) {
+      orderFn = undefined;
+    } else if (!orderInNature && orderByLengthFirst) {
+      orderFn = (a, b) => {
+        return (a.length || 0) - (b.length || 0)
+      }
+    } else if (orderInNature && orderByLengthFirst) {
+      orderFn = (a, b) => {
+        if ((a.length || 0) === (b.length || 0)) {
+          return a > b ? 1: -1;
+        } else {
+          return (a.length || 0) - (b.length || 0);
+        }
+      }
+    }
+    if (orderFn !== null) {
+      entryArr = entryArr.sort(orderFn);
+    }
+    uniquifyOutput.val(entryArr.join(lineWrapChar));
+    $("#outputCount")[0].innerText = entryArr.length;
+  });
+
+  // ******************** join / split panel ********************
+
+  const joinSplitJoined = $("#JS-joinSplitJoined");
+  const joinSplitSplitted = $("#JS-joinSplitSplitted");
+  $("#JS-triggerSplitting").click(e => {
+    const joinedText = joinSplitJoined.val();
+    const splitString = $("#JS-textSplitString").val() || "";
+    let splitArr = joinedText.split(splitString);
+    if ($("#JS-Unq-checkFilterEmpty")[0].checked) {
+      splitArr = splitArr.filter(item => !!item);
+    }
+    joinSplitSplitted.val(splitArr.join(lineWrapChar));
+  });
+
+  $("#JS-triggerJoining").click(e => {
+    const splittedLines = joinSplitSplitted.val();
+    const delimitString = $("#JS-textDelimitString").val() || "";
+    const splitString = $("#JS-textSplitString").val() || "";
+    let splitArr = splittedLines.split(lineWrapChar);
+    if ($("#JS-Unq-checkFilterEmpty")[0].checked) {
+      splitArr = splitArr.filter(item => !!item);
+    }
+    if (delimitString) {
+      splitArr = splitArr.map(item => `${delimitString}${item}${delimitString}`);
+    }
+    const joinedText = splitArr.join(splitString);
+    joinSplitJoined.val(joinedText);
+  });
+
+</script>
+</body>
+</html>
