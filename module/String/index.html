@@ -58,12 +58,14 @@
       width: 100%;
     }
     .controlOption label {
-      width: 60%;
+      width: 80%;
       flex: 1 1 80%;
     }
     .controlOption input[type="checkbox"] {
-      width: 20%;
-      flex: 0 0 auto;
+      flex: 0 0 10%;
+    }
+    .controlOption input[type="text"] {
+      flex: 0 0 60%;
     }
   </style>
 </head>
@@ -71,7 +73,7 @@
 <div class="toolList">
   <div class="toolOption">
     <span id="toggleUniquify" class="toggleButton">Uniquify</span>
-    <div class="toolPanel hide">
+    <div class="toolPanel _hide">
       <div class="flexElement">
         <label for="Unq-uniquifyInput">Input: <span id="inputCount"></span></label>
         <textarea id="Unq-uniquifyInput" wrap="off" style="overflow:scroll;"></textarea>
@@ -84,13 +86,15 @@
           <label for="Unq-checkFilterEmpty">FilterEmpty</label>
           <input id="Unq-checkFilterEmpty" type="checkbox">
         </span>
-        <span class="controlOption">
-          <label for="Unq-checkOrderInNature">OrderInNature</label>
-          <input id="Unq-checkOrderInNature" type="checkbox">
-        </span>
-        <span class="controlOption">
-          <label for="Unq-checkOrderByLengthFirst">OrderByLengthFirst</label>
-          <input id="Unq-checkOrderByLengthFirst" type="checkbox">
+        <span class="controlOption" style="flex-wrap:wrap !important;">
+          <label for="Unq-sortDesc">Sort Description</label>
+          <input id="Unq-sortDesc" type="text" />
+          <br>
+          <label for="Unq-checkSortByLength">Sort By Length</label>
+          <input id="Unq-checkSortByLength" type="checkbox" name="Unq-sorts">
+          <br>
+          <label for="Unq-checkSortInNature">Sort By Nature</label>
+          <input id="Unq-checkSortInNature" type="checkbox" name="Unq-sorts">
         </span>
       </div>
       <div class="flexElement">
@@ -119,6 +123,10 @@
         <span class="controlOption">
           <label for="JS-Unq-checkFilterEmpty">FilterEmpty</label>
           <input id="JS-Unq-checkFilterEmpty" type="checkbox">
+        </span>
+        <span class="controlOption">
+          <label for="JS-Unq-checkTrim">Trim</label>
+          <input id="JS-Unq-checkTrim" type="checkbox">
         </span>
         <hr>
         <span class="controlOption">
@@ -169,26 +177,21 @@
     if ($("#Unq-checkFilterEmpty")[0].checked) {
       entryArr = entryArr.filter(item => !!item);
     }
-    const orderInNature = $("#Unq-checkOrderInNature")[0].checked;
-    const orderByLengthFirst = $("#Unq-checkOrderByLengthFirst")[0].checked;
-    let orderFn = null;
-    if (orderInNature && !orderByLengthFirst) {
-      orderFn = undefined;
-    } else if (!orderInNature && orderByLengthFirst) {
-      orderFn = (a, b) => {
-        return (a.length || 0) - (b.length || 0)
-      }
-    } else if (orderInNature && orderByLengthFirst) {
-      orderFn = (a, b) => {
-        if ((a.length || 0) === (b.length || 0)) {
-          return a > b ? 1: -1;
-        } else {
-          return (a.length || 0) - (b.length || 0);
-        }
-      }
+
+    let sortFn = null;
+    let sortArr = [];
+
+    $("input[type='checkbox'][name=sorts]")
+    if ($("#Unq-checkSortByLength")[0].checked) {
+
     }
-    if (orderFn !== null) {
-      entryArr = entryArr.sort(orderFn);
+    if ($("#Unq-checkSortInNature")[0].checked) {
+
+    }
+
+
+    if (sortFn) {
+      entryArr = entryArr.sort(sortFn);
     }
     uniquifyOutput.val(entryArr.join(lineWrapChar));
     $("#outputCount")[0].innerText = entryArr.length;
@@ -202,8 +205,29 @@
     const joinedText = joinSplitJoined.val();
     const splitString = $("#JS-textSplitString").val() || "";
     let splitArr = joinedText.split(splitString);
+    let filterFn = null;
+    let mapFn = null;
     if ($("#JS-Unq-checkFilterEmpty")[0].checked) {
-      splitArr = splitArr.filter(item => !!item);
+      if (filterFn) {
+        let tempFn = filterFn;
+        filterFn = item => !!tempFn(item);
+      } else {
+        filterFn = item => !!item;
+      }
+    }
+    if ($("#JS-Unq-checkTrim")[0].checked) {
+      if (mapFn) {
+        let tempFn = mapFn;
+        mapFn = item => tempFn(item).trim();
+      } else {
+        mapFn = item => item.trim();
+      }
+    }
+    if (mapFn) {
+      splitArr = splitArr.map(mapFn);
+    }
+    if (filterFn) {
+      splitArr = splitArr.filter(filterFn);
     }
     joinSplitSplitted.val(splitArr.join(lineWrapChar));
   });
@@ -213,11 +237,37 @@
     const delimitString = $("#JS-textDelimitString").val() || "";
     const splitString = $("#JS-textSplitString").val() || "";
     let splitArr = splittedLines.split(lineWrapChar);
+    let filterFn = null;
+    let mapFn = null;
     if ($("#JS-Unq-checkFilterEmpty")[0].checked) {
-      splitArr = splitArr.filter(item => !!item);
+      if (filterFn) {
+        let tempFn = filterFn;
+        filterFn = item => !!tempFn(item);
+      } else {
+        filterFn = item => !!item;
+      }
+    }
+    if ($("#JS-Unq-checkTrim")[0].checked) {
+      if (mapFn) {
+        let tempFn = mapFn;
+        mapFn = item => tempFn(item).trim();
+      } else {
+        mapFn = item => item.trim();
+      }
     }
     if (delimitString) {
-      splitArr = splitArr.map(item => `${delimitString}${item}${delimitString}`);
+      if (mapFn) {
+        let tempFn = mapFn;
+        mapFn = item => `${delimitString}${tempFn(item)}${delimitString}`;
+      } else {
+        mapFn = item => `${delimitString}${item}${delimitString}`;
+      }
+    }
+    if (mapFn) {
+      splitArr = splitArr.map(mapFn);
+    }
+    if (filterFn) {
+      splitArr = splitArr.filter(filterFn);
     }
     const joinedText = splitArr.join(splitString);
     joinSplitJoined.val(joinedText);
