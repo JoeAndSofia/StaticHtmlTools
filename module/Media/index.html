@@ -4,6 +4,7 @@
   <title>MediaTools</title>
   <script src="../../node_modules/jquery/dist/jquery.js"></script>
   <script src="../../node_modules/video.js/dist/video.js"></script>
+  <link rel="stylesheet" type="text/css" href="../../node_modules/video.js/dist/video-js.css">
   <link rel="stylesheet" type="text/css" href="../../css/common.css">
   <style>
     html, body, div, span, label {
@@ -12,12 +13,30 @@
       -ms-user-select: none;
       user-select: none;
     }
+    .flex-box-row-wrap {
+      display: flex;
+      flex-flow: row wrap;
+    }
+
+    .flex-box-row-nowrap {
+      display: flex;
+      flex-flow: row nowrap;
+    }
+
+    .flex-box-col-wrap {
+      display: flex;
+      flex-flow: column wrap;
+    }
+
+    .flex-box-col-nowrap {
+      display: flex;
+      flex-flow: column nowrap;
+    }
+
     .toolOption .toggleButton {
       background-color: #0bf9cb;
     }
     .toolPanel {
-      display: flex;
-      flex-flow: row nowrap;
       justify-content: space-between;
       align-items: stretch;
       width: 100%;
@@ -31,11 +50,16 @@
       align-items: flex-start;
       margin: 0 10px;
     }
+    .toolPanel .controlPanel {
+      flex: 1 0 30%;
+    }
     .toolPanel .displayPanel {
       height: 90vh;
+      flex: 1 0 70%;
     }
     .toolPanel .displayPanel video {
       height: 100%;
+      width: 100%;
     }
   </style>
 </head>
@@ -43,16 +67,14 @@
 <div class="toolList">
   <div class="toolOption">
     <span id="toggleVideoPlay" class="toggleButton">VideoPlay</span>
-    <div class="toolPanel _hide">
-      <div class="flexElement">
+    <div class="flex-box-row-nowrap toolPanel _hide">
+      <div class="controlPanel flexElement">
         <label for="VdPl-pathType">Path Type: </label>
         <input id="VdPl-pathType" type="text" />
         <label for="VdPl-pathChoose">Path Choose: </label>
         <input id="VdPl-pathChoose" type="file" />
       </div>
-      <div id="VdPl-display" class="displayPanel">
-
-      </div>
+      <div id="VdPl-display" class="displayPanel flexElement"></div>
     </div>
   </div>
 
@@ -86,13 +108,18 @@
   const panelDisplay = $("#VdPl-display");
 
   const loadVideoFile = path => {
-    const video = document.createElement('video');
-    video.src = path;
-    video.controls = "controls";
+    const video = $('<video>', {
+      controls: 'controls',
+    });
     video.addClass('video-js');
-    video.innerText = "Your Browser doesn't support video html tag.";
-    panelDisplay.remove("video");
-    panelDisplay.append(video);
+
+    const source1 = $('<source>', {
+      src: path,
+      type: 'video/mp4'
+    });
+    panelDisplay.empty();
+    source1.appendTo(video);
+    video.appendTo(panelDisplay);
   };
 
   textPathType.keydown(e => {
