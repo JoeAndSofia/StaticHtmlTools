@@ -1,0 +1,120 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MediaTools</title>
+  <script src="../../node_modules/jquery/dist/jquery.js"></script>
+  <script src="../../node_modules/video.js/dist/video.js"></script>
+  <link rel="stylesheet" type="text/css" href="../../css/common.css">
+  <style>
+    html, body, div, span, label {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    .toolOption .toggleButton {
+      background-color: #0bf9cb;
+    }
+    .toolPanel {
+      display: flex;
+      flex-flow: row nowrap;
+      justify-content: space-between;
+      align-items: stretch;
+      width: 100%;
+    }
+    .toolPanel >.flexElement {
+      flex: 0 0;
+      flex-basis: calc(40% - 20px);
+      display: flex;
+      flex-flow: column nowrap;
+      justify-content: flex-start;
+      align-items: flex-start;
+      margin: 0 10px;
+    }
+    .toolPanel .displayPanel {
+      height: 90vh;
+    }
+    .toolPanel .displayPanel video {
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+<div class="toolList">
+  <div class="toolOption">
+    <span id="toggleVideoPlay" class="toggleButton">VideoPlay</span>
+    <div class="toolPanel _hide">
+      <div class="flexElement">
+        <label for="VdPl-pathType">Path Type: </label>
+        <input id="VdPl-pathType" type="text" />
+        <label for="VdPl-pathChoose">Path Choose: </label>
+        <input id="VdPl-pathChoose" type="file" />
+      </div>
+      <div id="VdPl-display" class="displayPanel">
+
+      </div>
+    </div>
+  </div>
+
+
+
+</div>
+<script>
+  const lineWrapChar = String.fromCharCode(10);
+
+  $(window).resize(function() {
+    console.log('String-Window-resize');
+    console.log($(window));
+  });
+
+  localStorage.setItem("1-1",1);
+
+  // ******************** section toggle ********************
+
+  const toggleButtons = $(".toggleButton");
+  for(let i=0; i < toggleButtons.length; i++) {
+    const toggleButton = $(toggleButtons[i]);
+    toggleButton.click(e => {
+      toggleButton.siblings(".toolpanel").toggleClass("hide");
+    })
+  }
+
+  // ******************** VideoPlay Panel ********************
+
+  const textPathType = $("#VdPl-pathType");
+  const filePathChoose = $("#VdPl-pathChoose");
+  const panelDisplay = $("#VdPl-display");
+
+  const loadVideoFile = path => {
+    const video = document.createElement('video');
+    video.src = path;
+    video.controls = "controls";
+    video.addClass('video-js');
+    video.innerText = "Your Browser doesn't support video html tag.";
+    panelDisplay.remove("video");
+    panelDisplay.append(video);
+  };
+
+  textPathType.keydown(e => {
+    switch (e.keyCode) {
+      case 13:  //enter
+        const path = e.target.value;
+        loadVideoFile(path);
+        break;
+    }
+  })
+  filePathChoose.submit(e => {
+    console.log(`submit-${Date.now()}: `, e);
+  });
+  filePathChoose.change(e => {
+    const file = e.target.files[0];
+    if (file) {
+      const windowURL = window.URL || window.webkitURL;
+      const dataUrl = windowURL.createObjectURL(file);
+      loadVideoFile(dataUrl);
+    }
+  });
+
+</script>
+</body>
+</html>

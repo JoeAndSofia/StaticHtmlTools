@@ -18,5 +18,8 @@
     "date-fns": "^2.5.1",
     "jquery": "^3.4.1",
     "jquery-dateformat": "^1.0.4"
+  },
+  "devDependencies": {
+    "video.js": "^7.6.6"
   }
 }
