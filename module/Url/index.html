@@ -1,0 +1,152 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>UrlTools</title>
+  <script src="../../node_modules/jquery/dist/jquery.js"></script>
+  <link rel="stylesheet" type="text/css" href="../../css/common.css">
+  <link rel="icon" href="./icon-url.svg">
+  <style>
+    html, body, div, span, label {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    .toolOption .toggleButton {
+      background-color: #0bf9cb;
+    }
+    .toolPanel {
+      display: flex;
+      flex-flow: row nowrap;
+      justify-content: space-between;
+      align-items: stretch;
+      width: 100%;
+    }
+    .toolPanel >.flexElement {
+      flex: 0 0;
+      flex-basis: calc(40% - 20px);
+      display: flex;
+      flex-flow: column nowrap;
+      justify-content: flex-start;
+      align-items: flex-start;
+      margin: 0 10px;
+    }
+    .toolPanel >.flexElement > textarea {
+      height: 400px;
+      width: 100%;
+    }
+    .controlFlexContainer {
+      flex: 0 0;
+      flex-basis: 20%;
+      display: flex;
+      flex-flow: column nowrap;
+      justify-content: space-around;
+      align-items: flex-start;
+      width: 100%;
+      margin: 10px 0;
+      background-color: transparent;
+    }
+    .controlOption {
+      flex: 0 0 auto;
+      display: flex;
+      flex-flow: row nowrap;
+      justify-content: space-around;
+      align-items: center;
+      width: 80%;
+      margin: 0 10%;
+    }
+    .controlFlexContainer > hr {
+      width: 100%;
+    }
+    .controlOption label {
+      width: 80%;
+      flex: 1 1 80%;
+    }
+    .controlOption input[type="checkbox"] {
+      flex: 0 0 10%;
+    }
+    .controlOption input[type="text"] {
+      flex: 0 0 60%;
+    }
+    .controlOption .shortText {
+      margin-left: 10px;
+      flex: none !important;
+      float: right;
+      width: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="toolList">
+
+  <div class="toolOption">
+    <span id="toggleUrlDecode" class="toggleButton">Decode</span>
+    <div class="toolPanel _hide">
+      <div class="flexElement">
+        <label for="Decode-inputTextarea">Input: <span id="inputCount"></span></label>
+        <textarea id="Decode-inputTextarea" wrap="on" style="overflow:scroll;"></textarea>
+      </div>
+      <div class="controlFlexContainer">
+        <span class="controlOption buttonButton">
+          <input id="Decode-triggerDecode" type="button" value="Decode ->">
+        </span>
+
+        <span class="controlOption checkOption">
+          <label for="Decode-option0">%20 <-> " "</label>
+          <input id="Decode-option0" type="checkbox" checked="true">
+        </span>
+
+        <span class="controlOption checkOption">
+          <label for="Decode-option1">%3A <-> ":"</label>
+          <input id="Decode-option1" type="checkbox" checked="true">
+        </span>
+
+        <span class="controlOption checkOption">
+          <label for="Decode-option2">%5B,%5D <-> "[,]"</label>
+          <input id="Decode-option2" type="checkbox" checked="true">
+        </span>
+
+      </div>
+      <div class="flexElement">
+        <label for="Decode-outputTextarea">Output: <span id="outputCount"></span></label>
+        <textarea id="Decode-outputTextarea" wrap="on" style="overflow:scroll;"></textarea>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<script>
+
+  // ******************** section toggle ********************
+
+  const toggleButtons = $(".toggleButton");
+  for (let i=0; i < toggleButtons.length; i++) {
+    toggleButtons.click(e => {
+      toggleButtons.siblings(".toolpanel").toggleClass("hide");
+    })
+  }
+
+  // ******************** decode panel ********************
+
+  const textareaInput = $("#Decode-inputTextarea");
+  const textareaOutput = $("#Decode-outputTextarea");
+
+  $("#Decode-triggerDecode").click(e => {
+    const inputText = textareaInput.val();
+    const result = inputText
+      .replace(/%20/ig, ' ')
+      .replace(/%3A/ig, ':')
+      .replace(/%5B/ig, '[')
+      .replace(/%5D/ig, ']')
+      .replace(/%2C/ig, ',')
+      .replace(/%3D/ig, '=');
+    textareaOutput.val(result);
+  })
+
+</script>
+
+</body>
+</html>

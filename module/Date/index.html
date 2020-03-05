@@ -1,10 +1,11 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>DateTools</title>
+  <title>DateTimeTools</title>
   <!--<script src="node_modules/jquery/dist/jquery.js"></script>-->
   <script src="../../node_modules/jquery-dateformat/dist/dateFormat.js"></script>
   <link rel="stylesheet" type="text/css" href="../../css/common.css">
+  <link rel="icon" href="./icon-date_time.svg">
   <style>
     html, body, div, span, label {
       -webkit-user-select: none;
@@ -21,7 +22,7 @@
       line-height: 20px;
     }
     .toolOption label {
-      background-color: #7ce3a7;
+      background-color: #0bf9cb;
     }
 
     #dateTime {
@@ -36,14 +37,22 @@
 <body>
 <div class="toolList">
   <div id="dateTime" class="toolOption">
-    <label tabindex="0" for="datetime01">DateTime (ClickCopy)</label>
-    <input id="datetime01" type="text"/>
+    <label tabindex="2" id="datetime01_label" for="datetime01">DateTime (ClickCopy)</label>
+    <input tabindex="1" id="datetime01" type="text"/>
   </div>
 </div>
 <script>
+  document.getElementById('datetime01_label').addEventListener(
+    'focus',
+    e => {
+      console.log('datetime01_label: clicked');
+      e.target.click();
+    }
+  );
   document.getElementById('datetime01').addEventListener(
     'focus',
     (e) => {
+      console.log('datetime01: clicked');
       const formattedTime = DateFormat.format.date(new Date(), 'yyyy-MM-dd HH:mm:ss');
       console.log(formattedTime);
       e.target.value = formattedTime;

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AlermTools</title>
+  <script src="../../node_modules/jquery/dist/jquery.js"></script>
+  <style>
+     #setAlarmArea input[type="number"] {
+       width: 70px;
+       text-align: right;
+      -moz-appearance: textfield;
+    }
+
+     #countAlarmArea input[type="number"] {
+       width: 70px;
+       text-align: right;
+       -moz-appearance: textfield;
+     }
+
+    #alarmArea .alarming{
+      color: red;
+    }
+  </style>
+  <link rel="icon" href="./icon-alarm.svg">
+</head>
+<body>
+
+<div>
+  <div><audio id="alarmAudio" src="alarm.wav"></audio></div>
+  <hr>
+  <div id="setAlarmArea">
+    <input id="set_desc" placeholder="描述" /> <br>
+
+    <input id="set_setToNow" type="button" value="Set To Now" />
+    <input id="set_reset" type="button" value="Reset" /> <br>
+
+    <input id="set_year" type="number" placeholder="Set Year" />-
+    <input id="set_month" type="number" placeholder="Set Month" />-
+    <input id="set_date" type="number" placeholder="Set Date" /> <br>
+
+    <input id="set_hour" type="number" placeholder="Set Hour" />:
+    <input id="set_minute" type="number" placeholder="Set Minute" />:
+    <input id="set_second" type="number" placeholder="Set Second" /> <br>
+
+    <button id="set_setAlarm">定时</button>
+  </div>
+
+  <br><hr><br>
+
+  <div id="countAlarmArea">
+    <input id="count_desc" placeholder="描述" /> <br>
+
+    <input id="count_hour" type="number" placeholder="hours" />
+    <input id="count_minute" type="number" placeholder="minutes" />
+    <input id="count_second" type="number" placeholder="seconds" /> <br>
+
+    <button id="count_setAlarm">计时</button>
+  </div>
+
+  <br><hr><br>
+
+  <div id="nowTimeArea">
+    <label>当前时间</label> <span id="nowTime">&nbsp;</span> <input id="toggleCheckLoop" type="button" value="ToggleClockAndCheckLoop" />
+  </div>
+
+  <br><hr><br>
+
+  <input id="removeAll" type="button" value="Remove all alarms" />
+  <input id="printAll" type="button" value="Print all alarms" />
+  <div id="alarmArea">
+  </div>
+
+  <br><hr><br>
+
+  <script>
+    let loopId = 0;
+
+    const alarmAudio = $("#alarmAudio");
+    let audioPlaying = false;
+    let audioPlayStartTime = 0;
+    const alarmLastDuration = 5500;   // 5 seconds;
+
+    const toggleAlarming = (on_off = false) => {
+      const now = Date.now();
+      if (on_off && (!audioPlaying || audioPlayStartTime === 0)) {
+        audioPlaying = true;
+        audioPlayStartTime = now;
+        alarmAudio[0].play();
+      } else if (!on_off && (audioPlaying && now - audioPlayStartTime > alarmLastDuration)) {
+        audioPlaying  = false;
+        audioPlayStartTime = 0;
+        alarmAudio[0].pause();
+        alarmAudio[0].currentTime = 0;
+      }
+    };
+
+    let reachedAlarmCount = 0;
+    const checkNumberInput = (element, upper, lower) => {
+      const value = parseInt(element.value);
+      let assignValue = upper;
+      if (Number.isInteger(value)) {
+        if (value > upper) {
+          assignValue = upper;
+        } else if (value <= lower) {
+          assignValue = lower;
+        } else {
+          assignValue = value;
+        }
+      } else {
+        assignValue = upper;
+      }
+      element.value = assignValue;
+      return assignValue;
+    };
+
+    const getDateUpper = (year, month) => {
+      if ([1,3,5,7,8,10,12].indexOf(month) !== -1) {
+        return 31;
+      } else if ([4,6,9,11].indexOf(month) !== -1) {
+        return 30;
+      } else if (month === 2) {
+        return (year % 4 === 0 && year % 100 !== 0) ? 29 : 28;
+      }
+    };
+
+    const biFmt = value => {
+      return (value < 10 && value >= 0) ? `0${value}` : value;
+    };
+
+    const formatDate = date => {
+      return `${date.getFullYear()}-${biFmt(date.getMonth() + 1)}-${biFmt(date.getDate())} ${biFmt(date.getHours())}:${biFmt(date.getMinutes())}:${biFmt(date.getSeconds())}`;
+    };
+
+    const getAlarmArray = () => {
+      const alarmRaw = localStorage.getItem('alarms');
+      let alarms = [];
+      if (alarmRaw) {
+        alarms = JSON.parse(alarmRaw);
+      }
+      if (!alarmRaw || !Array.isArray(alarms)) {
+        alarms = [];
+      }
+      return alarms;
+    };
+
+    const setAlarmArray = (alarms, doRender = false) => {
+      localStorage.setItem('alarms', JSON.stringify(alarms));
+      if (doRender) {
+        renderAlarms(alarms);
+      }
+    };
+
+    const removeByIndex = index => {
+      const alarms = getAlarmArray();
+      alarms.splice(index, 1);
+      setAlarmArray(alarms, true);
+    };
+
+    const toggleCheckLoop = $("#toggleCheckLoop");
+    toggleCheckLoop.click(e => {
+      if (loopId) {
+        clearInterval(loopId);
+        loopId = 0;
+      } else {
+        startCheckLoop();
+      }
+    });
+    const removeAllAlarms = $("#removeAll");
+    removeAllAlarms.click(e => {
+      localStorage.setItem('alarms', JSON.stringify([]));
+      renderAlarms([]);
+    });
+    const printAllAlarms = $("#printAll");
+    printAllAlarms.click(e => {
+      const alarms = getAlarmArray();
+      alarms.forEach((e, i) => console.log(i, ': ', e));
+    });
+    const renderAlarms = alarms => {
+      reachedAlarmCount = 0;
+      const now = Date.now();
+      const alarmArea = $("#alarmArea");
+      alarmArea.empty();
+      alarms.forEach((ele, idx) => {
+        const input = $('<input type="button" value="Remove" />');
+        input.click(e => {
+          removeByIndex(idx);
+        });
+        const reached = ele.time < now;
+        reachedAlarmCount += reached ? 1 : 0;
+        const contentSpan = $(`<span> ${idx+1}. ${formatDate(new Date(ele.time))} - ${ele.desc}</span>`);
+        const alarmDiv = $(`<div class=${ reached ? "alarming" : ""}></div>`);
+        alarmDiv.append(input);
+        alarmDiv.append(contentSpan);
+        alarmArea.append(alarmDiv);
+      });
+    };
+
+
+    const renderNowTime = () => {
+      $("#nowTime")[0].innerText = formatDate(new Date());
+    };
+
+    const startCheckLoop = () => {
+      loopId = setInterval(() => {
+        toggleAlarming(false);
+        let now = Date.now();
+        const alarms = getAlarmArray();
+
+        if (alarms.length) {
+          const now = Date.now();
+          const reached = [];
+          alarms.forEach((ele, idx) => {
+            if (ele.time < now) {
+              reached.push(idx);
+            }
+          });
+          if (reached.length && reached.length > reachedAlarmCount) {
+            reachedAlarmCount = reached.length;
+            renderAlarms(alarms);
+            toggleAlarming(true);
+          }
+        }
+        renderNowTime();
+      },500);
+    }
+  </script>
+
+  <script>
+    //定时元素
+    const setDesc     = $("#set_desc");
+
+    const setToNow    = $("#set_setToNow");
+    const setReset    = $("#set_reset");
+    
+    const setYear     = $("#set_year");
+    const setMonth    = $("#set_month");
+    const setDate     = $("#set_date");
+
+    const setHour     = $("#set_hour");
+    const setMinute   = $("#set_minute");
+    const setSecond   = $("#set_second");
+    
+    const setAlarm    = $("#set_setAlarm");
+
+    setToNow.click(e => {
+      const dateNow = new Date();
+      setYear[0].value = dateNow.getFullYear();
+      setMonth[0].value = dateNow.getMonth() + 1;
+      setDate[0].value = dateNow.getDate();
+
+      setHour[0].value = dateNow.getHours();
+      setMinute[0].value = dateNow.getMinutes();
+      setSecond[0].value = dateNow.getSeconds();
+    });
+    setReset.click(e => {
+      const dateNow = new Date();
+      setYear[0].value = dateNow.getFullYear();
+      setMonth[0].value = 1;
+      setDate[0].value = 1;
+
+      setHour[0].value = 0;
+      setMinute[0].value = 0;
+      setSecond[0].value = 0;
+    });
+
+    setYear.change(e => {
+      const dateNow = new Date();
+      const thisYear = checkNumberInput(e.target, dateNow.getFullYear() + 1, dateNow.getFullYear());
+      const thisMonth = parseInt(setMonth[0].value);
+      if (thisYear && Number.isInteger(thisMonth)) {
+        checkNumberInput(setDate[0], getDateUpper(thisYear, thisMonth), 1);
+      }
+    });
+    setMonth.change(e => {
+      const thisMonth = checkNumberInput(e.target, 12, 1);
+      const thisYear = parseInt(setYear[0].value);
+      if (thisMonth && Number.isInteger(thisYear)) {
+        checkNumberInput(setDate[0], getDateUpper(thisYear, thisMonth), 1);
+      }
+    });
+    setDate.change(e => {
+      const thisYear = parseInt(setYear[0].value);
+      const thisMonth = parseInt(setMonth[0].value);
+      if (Number.isInteger(thisYear) && Number.isInteger(thisMonth)) {
+        const thisDate = checkNumberInput(
+          e.target,
+          getDateUpper(thisYear, thisMonth),
+          1
+        );
+      } else {
+        const dateNow = new Date();
+        const thisYear = checkNumberInput(
+          setYear[0],
+          dateNow.getFullYear() + 1,
+          dateNow.getFullYear()
+        );
+        const thisMonth = checkNumberInput(
+          setMonth[0],
+          12,
+          dateNow.getMonth() + 1
+        );
+        const thisDate = checkNumberInput(
+          e.target,
+          getDateUpper(thisYear, thisMonth),
+          1
+        );
+      }
+
+    });
+    setHour.change(e => {
+      const thisHour = checkNumberInput(e.target, 23, 0);
+    });
+    setMinute.change(e => {
+      const thisMinute = checkNumberInput(e.target, 59, 0);
+    });
+    setSecond.change(e => {
+      const thisSecond = checkNumberInput(e.target, 59, 0);
+    });
+
+    setAlarm.click(e => {
+      const targetDate = new Date();
+      targetDate.setFullYear(parseInt(setYear[0].value));
+      targetDate.setMonth(parseInt(setMonth[0].value) - 1);
+      targetDate.setDate(parseInt(setDate[0].value));
+      targetDate.setHours(parseInt(setHour[0].value));
+      targetDate.setMinutes(parseInt(setMinute[0].value));
+      targetDate.setSeconds(parseInt(setSecond[0].value));
+      const time = targetDate.getTime();
+      const desc = setDesc[0].value;
+
+      const alarms = getAlarmArray();
+      alarms.push({
+        time,
+        desc
+      });
+
+      setAlarmArray(alarms, true);
+
+    })
+
+  </script>
+
+  <script>
+    //计时元素
+    const countDesc     = $("#count_desc");
+
+    const countHour   = $("#count_hour");
+    const countMinute = $("#count_minute");
+    const countSecond = $("#count_second");
+
+    const countAlarm  = $("#count_setAlarm");
+
+    countAlarm.click(e => {
+      const hr = countHour[0].value || 0;
+      const mi = countMinute[0].value || 0;
+      const se = countSecond[0].value || 0;
+      const now = Date.now();
+      const time = now + 3600000 * hr + 60000 * mi + 1000 * se;
+      const desc = countDesc[0].value;
+
+      const alarms = getAlarmArray();
+      alarms.push({
+        time,
+        desc
+      });
+
+      setAlarmArray(alarms, true);
+    })
+
+
+  </script>
+
+  <script>
+    renderAlarms(getAlarmArray());
+    startCheckLoop();
+  </script>
+</div>
+
+</body>
+</html>
