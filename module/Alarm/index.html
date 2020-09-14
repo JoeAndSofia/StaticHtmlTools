@@ -5,17 +5,17 @@
   <title>AlermTools</title>
   <script src="../../node_modules/jquery/dist/jquery.js"></script>
   <style>
-     #setAlarmArea input[type="number"] {
-       width: 70px;
-       text-align: right;
+    #setAlarmArea input[type="number"] {
+      width: 70px;
+      text-align: right;
       -moz-appearance: textfield;
     }
 
-     #countAlarmArea input[type="number"] {
-       width: 70px;
-       text-align: right;
-       -moz-appearance: textfield;
-     }
+    #countAlarmArea input[type="number"] {
+      width: 70px;
+      text-align: right;
+      -moz-appearance: textfield;
+    }
 
     #alarmArea .alarming{
       color: red;
@@ -60,7 +60,9 @@
   <br><hr><br>
 
   <div id="nowTimeArea">
-    <label>当前时间</label> <span id="nowTime">&nbsp;</span> <input id="toggleCheckLoop" type="button" value="ToggleClockAndCheckLoop" />
+    <label>当前时间</label> <span id="nowTime">&nbsp;</span> <input id="toggleCheckLoop" type="button" value="ToggleClockAndCheckLoop" /> <br>
+    <label>声音提醒: </label> <input id="toggleAudioRemind" type="checkbox" /> <br>
+    <label>通知提醒: </label> <input id="toggleNotificationRemind" type="checkbox" /> <br>
   </div>
 
   <br><hr><br>
@@ -73,24 +75,63 @@
   <br><hr><br>
 
   <script>
+    const appPrefix = 'AlarmTools';
     let loopId = 0;
 
     const alarmAudio = $("#alarmAudio");
     let audioPlaying = false;
     let audioPlayStartTime = 0;
-    const alarmLastDuration = 5500;   // 5 seconds;
+    const audioAlarmLastDuration = 5500;   // 5 seconds;
 
-    const toggleAlarming = (on_off = false) => {
+    let notificationDisplaying = false;
+    let notificationDisplayStartTime = 0;
+    const notificationAlarmLastDuration = 1800000;  // half hour
+
+    const toggleAlarming = (
+      audioRemind = false,
+      notificationRemind = false,
+      eventInfo = {}
+    ) => {
+
       const now = Date.now();
-      if (on_off && (!audioPlaying || audioPlayStartTime === 0)) {
+//      console.log({
+//        audioRemind, audioPlaying, audioPlayStartTime
+//      });
+      if (audioRemind && (!audioPlaying || audioPlayStartTime === 0)) {
         audioPlaying = true;
         audioPlayStartTime = now;
         alarmAudio[0].play();
-      } else if (!on_off && (audioPlaying && now - audioPlayStartTime > alarmLastDuration)) {
+      } else if (!audioRemind && (audioPlaying && now - audioPlayStartTime > audioAlarmLastDuration)) {
         audioPlaying  = false;
         audioPlayStartTime = 0;
         alarmAudio[0].pause();
         alarmAudio[0].currentTime = 0;
+      }
+
+//      console.log({
+//        audioRemind, notificationDisplaying, notificationDisplayStartTime
+//      });
+
+      if (notificationRemind && (!notificationDisplaying || notificationDisplayStartTime === 0)) {
+        notificationDisplaying = true;
+        notificationDisplayStartTime = now;
+
+        const notification = new Notification(
+          eventInfo.title || '',
+          eventInfo.options || {
+            body: 'Notification default content',
+            icon: ''
+          }
+        );
+      } else if (
+        !notificationRemind &&
+        (
+          notificationDisplaying &&
+          now - notificationDisplayStartTime > notificationAlarmLastDuration
+        )
+      ){
+        notificationDisplaying = false;
+        notificationDisplayStartTime = 0;
       }
     };
 
@@ -132,7 +173,7 @@
     };
 
     const getAlarmArray = () => {
-      const alarmRaw = localStorage.getItem('alarms');
+      const alarmRaw = localStorage.getItem(`${appPrefix}-alarms`);
       let alarms = [];
       if (alarmRaw) {
         alarms = JSON.parse(alarmRaw);
@@ -144,7 +185,7 @@
     };
 
     const setAlarmArray = (alarms, doRender = false) => {
-      localStorage.setItem('alarms', JSON.stringify(alarms));
+      localStorage.setItem(`${appPrefix}-alarms`, JSON.stringify(alarms));
       if (doRender) {
         renderAlarms(alarms);
       }
@@ -156,6 +197,26 @@
       setAlarmArray(alarms, true);
     };
 
+    const getInitState = () => {
+      const value = localStorage.getItem(`${appPrefix}-initState`);
+      let initState;
+      if (value) {
+        try {
+          initState = JSON.parse(value);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      if (!initState) {
+        initState = {};
+      }
+      return initState;
+    };
+
+    const setInitState = (initState, doRender = false) => {
+      localStorage.setItem(`${appPrefix}-initState`, JSON.stringify(initState));
+    };
+
     const toggleCheckLoop = $("#toggleCheckLoop");
     toggleCheckLoop.click(e => {
       if (loopId) {
@@ -165,16 +226,34 @@
         startCheckLoop();
       }
     });
+
+    const toggleAudioRemind = $("#toggleAudioRemind");
+    toggleAudioRemind.click(e => {
+      const initState = getInitState();
+      initState.audioRemind = e.target.checked;
+      setInitState(initState);
+
+      clearInterval(loopId);
+      startCheckLoop();
+    });
+
+    const toggleNotificationRemind = $("#toggleNotificationRemind");
+
+    toggleNotificationRemind.click(e => {
+      const initState = getInitState();
+      initState.notificationRemind = e.target.checked;
+      setInitState(initState);
+
+      clearInterval(loopId);
+      startCheckLoop();
+    });
+
     const removeAllAlarms = $("#removeAll");
     removeAllAlarms.click(e => {
-      localStorage.setItem('alarms', JSON.stringify([]));
+      localStorage.setItem(`${appPrefix}-alarms`, JSON.stringify([]));
       renderAlarms([]);
     });
     const printAllAlarms = $("#printAll");
-    printAllAlarms.click(e => {
-      const alarms = getAlarmArray();
-      alarms.forEach((e, i) => console.log(i, ': ', e));
-    });
     const renderAlarms = alarms => {
       reachedAlarmCount = 0;
       const now = Date.now();
@@ -201,11 +280,19 @@
     };
 
     const startCheckLoop = () => {
-      loopId = setInterval(() => {
-        toggleAlarming(false);
-        let now = Date.now();
-        const alarms = getAlarmArray();
+      const {
+        audioRemind = false,
+        notificationRemind = false
+      } = getInitState();
 
+      console.log({
+        audioRemind,
+        notificationRemind
+      });
+      loopId = setInterval(() => {
+        const alarms = getAlarmArray();
+        toggleAlarming(false, false);
+        let now = Date.now();
         if (alarms.length) {
           const now = Date.now();
           const reached = [];
@@ -217,11 +304,29 @@
           if (reached.length && reached.length > reachedAlarmCount) {
             reachedAlarmCount = reached.length;
             renderAlarms(alarms);
-            toggleAlarming(true);
+            toggleAlarming(
+              audioRemind,
+              notificationRemind,
+              {
+                title: 'Alarm',
+                options: {
+                  body: 'test-body'
+                }
+              }
+            );
           }
         }
         renderNowTime();
       },500);
+    };
+
+    const initElementState = () => {
+      const initState = getInitState();
+      console.log({
+        initState
+      });
+      toggleAudioRemind[0].checked = !!(initState.audioRemind);
+      toggleNotificationRemind[0].checked = !!(initState.notificationRemind);
     }
   </script>
 
@@ -231,7 +336,7 @@
 
     const setToNow    = $("#set_setToNow");
     const setReset    = $("#set_reset");
-    
+
     const setYear     = $("#set_year");
     const setMonth    = $("#set_month");
     const setDate     = $("#set_date");
@@ -239,7 +344,7 @@
     const setHour     = $("#set_hour");
     const setMinute   = $("#set_minute");
     const setSecond   = $("#set_second");
-    
+
     const setAlarm    = $("#set_setAlarm");
 
     setToNow.click(e => {
@@ -317,7 +422,7 @@
       const thisSecond = checkNumberInput(e.target, 59, 0);
     });
 
-    setAlarm.click(e => {
+    const setCommitAlarm = () => {
       const targetDate = new Date();
       targetDate.setFullYear(parseInt(setYear[0].value));
       targetDate.setMonth(parseInt(setMonth[0].value) - 1);
@@ -335,7 +440,30 @@
       });
 
       setAlarmArray(alarms, true);
+    };
 
+    const setClearValues = () => {
+      setDesc[0].value = '';
+      setYear[0].value = 0;
+      setMonth[0].value = 0;
+      setDate[0].value = 0;
+      setHour[0].value = 0;
+      setMinute[0].value = 0;
+      setSecond[0].value = 0;
+    };
+
+    setDesc.keydown(e => {
+      switch (e.keyCode) {
+        case 13:  //enter
+          setCommitAlarm();
+          setClearValues();
+          break;
+      }
+    });
+
+    setAlarm.click(e => {
+      setCommitAlarm();
+      setClearValues();
     })
 
   </script>
@@ -350,7 +478,7 @@
 
     const countAlarm  = $("#count_setAlarm");
 
-    countAlarm.click(e => {
+    const countCommitAlarm = () => {
       const hr = countHour[0].value || 0;
       const mi = countMinute[0].value || 0;
       const se = countSecond[0].value || 0;
@@ -365,6 +493,27 @@
       });
 
       setAlarmArray(alarms, true);
+    };
+
+    const countClearValues = () => {
+      countDesc[0].value = '';
+      countHour[0].value = 0;
+      countMinute[0].value = 0;
+      countSecond[0].value = 0;
+    };
+
+    countDesc.keydown(e => {
+      switch (e.keyCode) {
+        case 13:  //enter
+          countCommitAlarm();
+          countClearValues();
+          break;
+      }
+    });
+
+    countAlarm.click(e => {
+      countCommitAlarm();
+      countClearValues();
     })
 
 
@@ -373,6 +522,7 @@
   <script>
     renderAlarms(getAlarmArray());
     startCheckLoop();
+    initElementState();
   </script>
 </div>
 

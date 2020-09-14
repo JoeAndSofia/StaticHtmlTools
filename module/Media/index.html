@@ -70,6 +70,8 @@
     <span id="toggleVideoPlay" class="toggleButton">VideoPlay</span>
     <div class="flex-box-row-nowrap toolPanel _hide">
       <div class="controlPanel flexElement">
+        <label for="VdPl-stepInterval">Step Interval: </label>
+        <input id="VdPl-stepInterval" type="number" value="2" />
         <label for="VdPl-pathType">Type Path: </label>
         <input id="VdPl-pathType" type="text" />
         <label for="VdPl-pathChoose">Path Choose: </label>
@@ -124,6 +126,7 @@
   };
 
   textPathType.keydown(e => {
+    console.log(`e.keyCode: ${e.keyCode}`);
     switch (e.keyCode) {
       case 13:  //enter
         const path = e.target.value;
