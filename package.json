@@ -16,7 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "date-fns": "^2.5.1",
-    "jquery": "^3.4.1",
+    "jquery": "^3.5.0",
     "jquery-confirm": "^3.3.4",
     "jquery-dateformat": "^1.0.4",
     "moment": "^2.24.0"
