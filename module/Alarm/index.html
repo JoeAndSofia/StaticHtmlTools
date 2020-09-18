@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>AlermTools</title>
-  <script src="../../node_modules/jquery/dist/jquery.js"></script>
+  <script src="../../node_modules/jquery/dist/jquery.js" type="text/javascript"></script>
+  <script src="../../node_modules/jquery-confirm/dist/jquery-confirm.min.js" type="text/javascript"></script>
+  <link href="../../node_modules/jquery-confirm/dist/jquery-confirm.min.css" rel="stylesheet" media="screen">
   <style>
     #setAlarmArea input[type="number"] {
       width: 70px;
@@ -55,6 +57,7 @@
     <input id="count_second" type="number" placeholder="seconds" /> <br>
 
     <button id="count_setAlarm">计时</button>
+    <button id="count_setAlarmAndSaveFavorite">计时并保存</button>
   </div>
 
   <br><hr><br>
@@ -66,8 +69,13 @@
   </div>
 
   <br><hr><br>
+  <p>Favorites</p>
+  <div id="favoriteArea">
+  </div>
 
-  <input id="removeAll" type="button" value="Remove all alarms" />
+  <br><hr><br>
+  <p>Alrams</p>
+  <!--<input id="removeAll" type="button" value="Remove all alarms" />-->
   <input id="printAll" type="button" value="Print all alarms" />
   <div id="alarmArea">
   </div>
@@ -75,6 +83,10 @@
   <br><hr><br>
 
   <script>
+    const ALARM_TYPE = {
+      SET: 0,
+      COUNT: 1
+    };
     const appPrefix = 'AlarmTools';
     let loopId = 0;
 
@@ -176,7 +188,11 @@
       const alarmRaw = localStorage.getItem(`${appPrefix}-alarms`);
       let alarms = [];
       if (alarmRaw) {
-        alarms = JSON.parse(alarmRaw);
+        try {
+          alarms = JSON.parse(alarmRaw) || alarms;
+        } catch (e) {
+          console.error(`getAlarmArray-error: ${e.message}`);
+        }
       }
       if (!alarmRaw || !Array.isArray(alarms)) {
         alarms = [];
@@ -191,30 +207,53 @@
       }
     };
 
-    const removeByIndex = index => {
+    const removeAlarmByIndex = index => {
       const alarms = getAlarmArray();
       alarms.splice(index, 1);
       setAlarmArray(alarms, true);
     };
 
+    const removeFavoriteByIndex = index => {
+      const favorites = getFavoriteArray();
+      favorites.splice(index, 1);
+      setFavoriteArray(favorites, true);
+    };
+
     const getInitState = () => {
       const value = localStorage.getItem(`${appPrefix}-initState`);
-      let initState;
+      let initState = {};
       if (value) {
         try {
-          initState = JSON.parse(value);
+          initState = JSON.parse(value) || initState;
         } catch (e) {
-          console.error(e);
+          console.error(`getInitState-error: ${e.message}`);
         }
-      }
-      if (!initState) {
-        initState = {};
       }
       return initState;
     };
 
     const setInitState = (initState, doRender = false) => {
       localStorage.setItem(`${appPrefix}-initState`, JSON.stringify(initState));
+    };
+
+    const getFavoriteArray = () => {
+      const value = localStorage.getItem(`${appPrefix}-favorites`);
+      let favorites = [];
+      if (value) {
+        try {
+          favorites = JSON.parse(value) || favorites;
+        } catch (e) {
+          console.error(`getFavorite-error: ${e.message}`);
+        }
+      }
+      return favorites;
+    };
+
+    const setFavoriteArray = (favorites, doRender = false) => {
+      localStorage.setItem(`${appPrefix}-favorites`, JSON.stringify(favorites));
+      if (doRender) {
+        renderFavorites(favorites);
+      }
     };
 
     const toggleCheckLoop = $("#toggleCheckLoop");
@@ -254,24 +293,94 @@
       renderAlarms([]);
     });
     const printAllAlarms = $("#printAll");
+    printAllAlarms.click(e => {
+      const alarms = getAlarmArray();
+      alarms.forEach(e => {
+        console.log(e);
+      });
+    });
     const renderAlarms = alarms => {
       reachedAlarmCount = 0;
       const now = Date.now();
       const alarmArea = $("#alarmArea");
       alarmArea.empty();
       alarms.forEach((ele, idx) => {
-        const input = $('<input type="button" value="Remove" />');
-        input.click(e => {
-          removeByIndex(idx);
+        const inputRemove = $('<input type="button" value="Remove" />');
+        inputRemove.click(e => {
+          removeAlarmByIndex(idx);
+        });
+        const inputUpdateDesc = $('<input type="button" value="Update Desc" />');
+        inputUpdateDesc.click(e => {
+          $.confirm({
+            keyboardEnabled: true,
+            content: `Update new description and time:<br>
+<input type="text", placeholder="description" />
+<input type="number"`,
+            confirmKeys: [65],
+            cancelKeys: [66],
+            cancel: () => {
+              $.alert('Cancelled');
+            },
+            confirm: () => {
+              $.alert('Updated')
+            }
+          });
+        });
+        const inputUpdateTime = $('<input type="button" value="Update Time" />');
+        inputUpdateTime.click(e => {
+//          $.confirm({
+//
+//          })
         });
         const reached = ele.time < now;
         reachedAlarmCount += reached ? 1 : 0;
         const contentSpan = $(`<span> ${idx+1}. ${formatDate(new Date(ele.time))} - ${ele.desc}</span>`);
         const alarmDiv = $(`<div class=${ reached ? "alarming" : ""}></div>`);
-        alarmDiv.append(input);
+        alarmDiv.append(inputRemove);
         alarmDiv.append(contentSpan);
+        alarmDiv.append(inputUpdateDesc);
+
         alarmArea.append(alarmDiv);
       });
+    };
+
+    const renderFavorites = favorites => {
+      const favoriteArea = $("#favoriteArea");
+      favoriteArea.empty();
+      favorites.forEach((ele, idx) => {
+        const {
+          desc,
+          hr,
+          mi,
+          se
+        } = ele;
+
+        const inputLaunch = $('<input type="button" value="Launch CountAlarm" />');
+        const inputRemove = $('<input type="button" value="Remove CountCountAlarm" />');
+        const contentSpan = $(`<span> ${idx + 1}. ${desc}: ${hr?`${hr} hour(s) `:''}${mi?`${mi} minute(s) `:''}${se?`${se} second(s)`:''}</span>`);
+
+        inputLaunch.click(e => {
+          const now = Date.now();
+          const time = now + 3600000 * hr + 60000 * mi + 1000 * se;
+          const alarms = getAlarmArray();
+          alarms.push({
+            time,
+            desc
+          });
+          setAlarmArray(alarms, true);
+        });
+
+        inputRemove.click(e => {
+          removeFavoriteByIndex(idx);
+        });
+
+        const favoriteDiv = $('<div></div>');
+        favoriteDiv.append(inputLaunch);
+        favoriteDiv.append(contentSpan);
+        favoriteDiv.append(inputRemove);
+
+        favoriteArea.append(favoriteDiv);
+      })
     };
 
 
@@ -298,19 +407,21 @@
           const reached = [];
           alarms.forEach((ele, idx) => {
             if (ele.time < now) {
-              reached.push(idx);
+              reached.push(ele);
             }
           });
           if (reached.length && reached.length > reachedAlarmCount) {
             reachedAlarmCount = reached.length;
             renderAlarms(alarms);
+            const notiText =reached.map(e => e.desc).join(', ');
+            console.log('notiText: ', notiText);
             toggleAlarming(
               audioRemind,
               notificationRemind,
               {
                 title: 'Alarm',
                 options: {
-                  body: 'test-body'
+                  body: notiText
                 }
               }
             );
@@ -422,7 +533,7 @@
       const thisSecond = checkNumberInput(e.target, 59, 0);
     });
 
-    const setCommitAlarm = () => {
+    const setCommitAlarm = (saveToFavorite = false) => {
       const targetDate = new Date();
       targetDate.setFullYear(parseInt(setYear[0].value));
       targetDate.setMonth(parseInt(setMonth[0].value) - 1);
@@ -440,6 +551,10 @@
       });
 
       setAlarmArray(alarms, true);
+
+      if (saveToFavorite) {
+        console.log('set type alarm canot be favorited.');
+      }
     };
 
     const setClearValues = () => {
@@ -477,8 +592,9 @@
     const countSecond = $("#count_second");
 
     const countAlarm  = $("#count_setAlarm");
+    const countAlarmAndSaveFavorite = $("#count_setAlarmAndSaveFavorite");
 
-    const countCommitAlarm = () => {
+    const countCommitAlarm = (saveToFavorite = false) => {
       const hr = countHour[0].value || 0;
       const mi = countMinute[0].value || 0;
       const se = countSecond[0].value || 0;
@@ -491,15 +607,26 @@
         time,
         desc
       });
-
       setAlarmArray(alarms, true);
+
+      if (saveToFavorite) {
+        const favorites = getFavoriteArray();
+        favorites.push({
+          t: ALARM_TYPE.COUNT,
+          desc,
+          hr,
+          mi,
+          se
+        });
+        setFavoriteArray(favorites, true);
+      }
     };
 
     const countClearValues = () => {
       countDesc[0].value = '';
-      countHour[0].value = 0;
-      countMinute[0].value = 0;
-      countSecond[0].value = 0;
+      countHour[0].value = '';
+      countMinute[0].value = '';
+      countSecond[0].value = '';
     };
 
     countDesc.keydown(e => {
@@ -514,6 +641,11 @@
     countAlarm.click(e => {
       countCommitAlarm();
       countClearValues();
+    });
+
+    countAlarmAndSaveFavorite.click(e => {
+      countCommitAlarm(true);
+      countClearValues();
     })
 
 
@@ -521,6 +653,7 @@
 
   <script>
     renderAlarms(getAlarmArray());
+    renderFavorites(getFavoriteArray());
     startCheckLoop();
     initElementState();
   </script>
